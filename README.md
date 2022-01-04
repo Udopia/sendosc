@@ -7,7 +7,7 @@ Sonification denotes the modelling of acoustic representations of data.
 Acoustic data modelling is particularly useful for the portrayal of time series.
 Time series of data map naturally to acoustic time series and human auditory perception has a high temporal resolution, i.e., distinguishable events per second.
 
-Runs of algorithms can be understood as a series of internal states and events.
+Runs of algorithms can be understood as a time series of internal states and events.
 Algorithm sonification denotes the acoustic modelling of that data.
 That involves two steps:
 

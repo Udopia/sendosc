@@ -11,7 +11,7 @@ Runs of algorithms can be understood as a time series of internal states and eve
 Algorithm sonification denotes the acoustic modelling of that data.
 That involves two steps:
 
-  * Data selection: Select data points to use in acoustic modelling
+  * Data selection: Select data points for use in acoustic modelling
   * Acoustic modelling: Decide how data points shape the sound scape
 
 Open Sound Control (OSC) is a UDP-based network protocol.

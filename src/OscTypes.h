@@ -59,7 +59,7 @@ struct AbstractType {
      * @brief Serialize content into given buffer
      * @param buffer
      */
-    void serialize(char* buffer) { }
+    void serialize(char*) { }
 };
 
 

@@ -63,7 +63,42 @@ class UdpSocket {
 
     void Send(const char *data, std::size_t size) {
         if (send(socket_, data, size, 0) == -1) {
-            throw std::runtime_error("sending failed\n");
+            switch (errno) {
+                case EACCES:
+                    throw std::runtime_error("An attempt was made to send to a network/broadcast address as though it was a unicast address.\n");
+                case EAGAIN:
+                    throw std::runtime_error("The socket is marked nonblocking and the requested operation would block.\n");
+                case EBADF:
+                    throw std::runtime_error("An invalid descriptor was specified.\n");
+                case ECONNRESET:
+                    throw std::runtime_error("Connection reset by peer.\n");
+                case EDESTADDRREQ:
+                    throw std::runtime_error("The socket is not connection-mode, and no peer address is set.\n");
+                case EFAULT:
+                    throw std::runtime_error("An invalid user space address was specified for an argument.\n");
+                case EINTR:
+                    throw std::runtime_error("A signal occurred before any data was transmitted.\n");
+                case EINVAL:
+                    throw std::runtime_error("Invalid argument passed.\n");
+                case EISCONN:
+                    throw std::runtime_error("The connection-mode socket was connected already but a recipient was specified.\n");
+                case EMSGSIZE:
+                    throw std::runtime_error("The socket type requires that message be sent atomically, and the size of the message to be sent made this impossible.\n");
+                case ENOBUFS:
+                    throw std::runtime_error("The output queue for a network interface was full.\n");
+                case ENOMEM:
+                    throw std::runtime_error("No memory available.\n");
+                case ENOTCONN:
+                    throw std::runtime_error("The socket is not connected, and no target has been given.\n");
+                case ENOTSOCK:
+                    throw std::runtime_error("The argument sockfd is not a socket.\n");
+                case EOPNOTSUPP:
+                    throw std::runtime_error("Some bit in the flags argument is inappropriate for the socket type.\n");
+                case EPIPE:
+                    throw std::runtime_error("The local end has been shut down on a connection oriented socket.\n");
+                default:
+                    throw std::runtime_error("Sending failed for unknown reasons\n");
+            }
         }
     }
 };

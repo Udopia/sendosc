@@ -175,7 +175,7 @@ class Stream {
      * @param msg Flush Object
      * @return Stream& *this
      */
-    Stream& operator<<(const Flush& msg) {
+    Stream& operator<<(const Flush&) {
         flush();
         return *this;
     }

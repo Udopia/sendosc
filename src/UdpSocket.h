@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
+#include <iostream>
 #include <stdexcept>
 #include <cstring>
 
@@ -35,10 +35,10 @@ namespace OSC {
  * Throws runtime_error objects to signal fail states
  */
 class UdpSocket {
-    int socket_;
+    int sockfd;
 
  public:
-    UdpSocket(const char* address, uint16_t port) : socket_(-1) {
+    UdpSocket(const char* address, uint16_t port) : sockfd(-1) {
         struct sockaddr_in addr;
         std::memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
@@ -48,22 +48,30 @@ class UdpSocket {
             throw std::runtime_error("unable to convert inet address\n");
         }
 
-        if ((socket_ = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+        if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
             throw std::runtime_error("unable to create socket\n");
         }
+        
+        // ignore ICMP port unreachable messages
+        int rcvbuf = 1;
+        setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
 
-        if (connect(socket_, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             throw std::runtime_error("unable to connect\n");
         }
     }
 
     ~UdpSocket() {
-        if (socket_ != -1) close(socket_);
+        if (sockfd != -1) close(sockfd);
     }
 
     void Send(const char *data, std::size_t size) {
-        if (send(socket_, data, size, 0) == -1) {
+        if (send(sockfd, data, size, 0) == -1) {
             switch (errno) {
+                case ECONNREFUSED:
+                    // throw std::runtime_error("The target address is not listening.\n");
+                    std::cerr << "The target address is not listening." << std::endl;
+                    break;
                 case EACCES:
                     throw std::runtime_error("An attempt was made to send to a network/broadcast address as though it was a unicast address.\n");
                 case EAGAIN:
@@ -97,7 +105,7 @@ class UdpSocket {
                 case EPIPE:
                     throw std::runtime_error("The local end has been shut down on a connection oriented socket.\n");
                 default:
-                    throw std::runtime_error("Sending failed for unknown reasons\n");
+                    throw std::runtime_error("Sending failed for unknown reasons: " + std::to_string(errno) + "\n");
             }
         }
     }

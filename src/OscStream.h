@@ -20,29 +20,34 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef SRC_OSCSTREAM_H_
 #define SRC_OSCSTREAM_H_
 
+#include <cassert>
+
 #include "UdpSocket.h"
 #include "OscTypes.h"
 
 /**
- * @brief Namespace of OSC Data Stream and Structs
+ * This implementation of OSC handles one bundle of messages at a time,
+ * on flush it sends the bundle via UDP Socket, and starts a new bundle.
  */
 namespace OSC {
 
 /**
- * @brief OSC Stream Object
- * Creates UDP Socket for given Address and Port
- * Sends incoming OSC Structs via UDP Socket
+ * @brief OSC stream object, creates an UDP socket, 
+ * and sends bundles of OSC messages
  */
 class Stream {
-    char* data_;  // data begin
-    char* dend_;  // data end
-    char* type_;  // type begin
-    char* tend_;  // type end
+    // data buffer: begin, end, and cursor
+    char* data_;
+    char* dend_;
+    char* dcursor_;
 
-    char* dcursor_;  // data cursor
-    char* tcursor_;  // type cursor
+    // type buffer: begin, end, and cursor
+    char* type_;
+    char* tend_;
+    char* tcursor_;
 
-    char* mstart_;  // pointer to start of current message
+    // pointer to start of current message
+    char* mstart_;
 
     UdpSocket sock_;
 
@@ -52,93 +57,89 @@ class Stream {
         type_ = new char[capacity]();
         dend_ = data_ + capacity;
         tend_ = type_ + capacity;
-        mstart_ = nullptr;
-        clear_type();
-        clear_data();
+        init_fresh_bundle();
+        init_type_buffer();
     }
 
     ~Stream() {
-        flush();
         delete[] data_;
         delete[] type_;
     }
 
     /**
-     * @brief Intialize type data
+     * @brief Initialize bundle header
      */
-    void clear_type() {
-        tcursor_ = type_;
+    void init_fresh_bundle() {
+        std::fill(data_, dend_, '\0');
+        dcursor_ = data_;
+        write(String("#bundle"));
+        write(Time());
+        mstart_ = dcursor_;
+    }
+
+    void init_type_buffer() {
         std::fill(type_, tend_, '\0');
+        tcursor_ = type_;
         *tcursor_ = ',';
         ++tcursor_;
     }
 
     /**
-     * @brief Initialize bundle header
+     * @brief Flush bundle and initialize next bundle
      */
-    void clear_data() {
-        dcursor_ = data_;
-        std::fill(data_, dend_, '\0');
-        write(String("#bundle"));
-        write(Time());
-    }
-
-    /**
-     * @brief Finalize Message (if possible)
-     * Serialize Message Length
-     * Insert type string between message uri and message data
-     */
-    void finalize() {
-        if (mstart_ != nullptr) {
-            unsigned offset = 4 + String(mstart_ + 4).size();  // size bytes + uri size
-            unsigned len = static_cast<int32_t>(dcursor_ - mstart_) - offset;
-            unsigned tlen = String(type_).size();
-            if (len > 4) {
-                Int(len - 4).serialize(mstart_);  // write the first four bytes (= message length)
-                std::memmove(mstart_ + offset + tlen, mstart_ + offset, len);  // create space for type info
-                dcursor_ += tlen;
-            }
-            std::memcpy(mstart_ + offset, type_, tlen);  // copy type info
-            clear_type();
-            mstart_ = nullptr;
+    void flush_bundle() {
+        end_current_message();
+        if (dcursor_ > data_ + 16) {
+            std::cerr << "Sending " << dcursor_ - data_ << " bytes" << std::endl;
+            std::cerr << "Data: " << data_ << std::endl;
+            sock_.Send(data_, dcursor_ - data_);
+            init_fresh_bundle();
+        }
+        else {
+            std::cerr << "Warning: suppressing attempt to send empty bundle" << std::endl;
         }
     }
 
     /**
-     * @brief Initialize New Message
-     * Finalize Previous Message (if necessary)
-     * Initialize Message Length to 0
-     * Initialize Message URI
-     * 
+     * @brief Initialize next message header with length and uri
      * @param uri Message URI
      */
-    void message(const char* uri) {
-        finalize();
+    void start_message(const char* uri) {
+        end_current_message();
         mstart_ = dcursor_;
         write(Int(0));
         write(String(uri));
     }
 
     /**
-     * @brief Flush Message Buffer to Socket
-     * Finalize Previous Message (if necessary)
-     * Send OSC Bundle
-     * Initialize Next OSC Bundle 
-     * The Bundle Timestamp encodes the time passed since first flush
+     * @brief Serialize message: insert type info and message size
      */
-    void flush() {
-        finalize();
-        if (dcursor_ > data_ + 16) {
-            sock_.Send(data_, dcursor_ - data_);
-            clear_data();
+    void end_current_message() {
+        // if message is not empty, write type info and message size
+        if (strlen(type_) > 1) {
+            // write type info to header
+            auto type_info = String(type_);
+            unsigned header_size = 4 + String(mstart_ + 4).size();
+            unsigned content_size = dcursor_ - mstart_ - header_size;
+            // move data to make space for type info, then copy type info, and advance cursor
+            std::memmove(mstart_ + header_size + type_info.size(), mstart_ + header_size, content_size);
+            type_info.serialize(mstart_ + header_size);
+            dcursor_ += type_info.size();
+            // write message size to header
+            int32_t message_size = static_cast<int32_t>(dcursor_ - mstart_);
+            Int(message_size - 4).serialize(mstart_);
+            // reset type buffer to make sure this block is not executed twice
+            init_type_buffer();
+        }
+        // else reset cursor to start of message
+        else {
+            std::fill(mstart_, dcursor_, '\0');
+            dcursor_ = mstart_;
         }
     }
 
     /**
-     * @brief Serializes OSC Structs
-     * Serializes type info and shifts the type cursor (if activated)
-     * Serializes data fields and shifts the data cursor
-     * 
+     * @brief Serialize OSC datatypes, write type info and data fields
      * @tparam T OSC Struct Type
      * @param msg OSC Struct Object
      * @param write_type activates serialization of type info (default: false)
@@ -157,10 +158,9 @@ class Stream {
     }
 
     /**
-     * @brief Stream Operator for most OSC Structs
-     * 
-     * @tparam T OSC Struct Type
-     * @param msg OSC Struct Object
+     * @brief Stream operator for serializing OSC types
+     * @tparam T OSC type
+     * @param msg OSC object
      * @return Stream& *this
      */
     template<typename T>
@@ -170,24 +170,22 @@ class Stream {
     }
 
     /**
-     * @brief Stream Operator for Flush Triggers
-     * 
-     * @param msg Flush Object
+     * @brief Stream operator for flushing the current message bundle
+     * @param msg Flush type object
      * @return Stream& *this
      */
     Stream& operator<<(const Flush&) {
-        flush();
+        flush_bundle();
         return *this;
     }
 
     /**
-     * @brief Stream Operator for Message Triggers
-     * 
-     * @param msg Message Object
+     * @brief Stream operator for starting a new message
+     * @param msg Message type object
      * @return Stream& *this
      */
     Stream& operator<<(const Message& msg) {
-        message(msg.uri_);
+        start_message(msg.uri_);
         return *this;
     }
 };

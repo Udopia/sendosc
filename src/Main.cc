@@ -21,5 +21,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 int main(int argc, const char** argv) {
     OSC::Stream osc("127.0.0.1", 5000);
+    osc << OSC::Message("/test") << OSC::Float(0.5) << OSC::Flush();
+    osc << OSC::Message("/test") << OSC::Int(42) << OSC::Flush();
     osc << OSC::Message("/test") << OSC::String("abrakadabra") << OSC::Int(42) << OSC::Flush();
+    osc << OSC::Message("/test") << OSC::String("abrakadabra") << OSC::Message("/test2") << OSC::Int(42) << OSC::Flush();
 }

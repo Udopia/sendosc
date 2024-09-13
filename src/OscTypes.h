@@ -27,6 +27,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdexcept>
 #include <iostream>
 #include <chrono>
+#include <byteswap.h>
 
 /**
  * @brief Namespace of OSC Data Stream and Structs
@@ -62,6 +63,34 @@ struct AbstractType {
     void serialize(char*) { }
 };
 
+/**
+ * @brief Start a new message
+ * Finalize previous message
+ */
+struct Message : AbstractType<> {
+    const char* uri_;
+    explicit Message(const char* uri) : uri_(uri) {}
+};
+
+/**
+ * @brief Send all messages in current bundle and start a new bundle
+ * Also finalizes current message
+ */
+struct Flush : AbstractType<> {};
+
+/////////////////
+// Impulse Types
+
+struct True : AbstractType<0, 'T'> { };
+
+struct False : AbstractType<0, 'F'> { };
+
+struct Null : AbstractType<0, 'N'> { };
+
+struct Impulse : AbstractType<0, 'I'> { };
+
+/////////////////
+// Numeric Types
 
 /**
  * @brief Base class for Int, Float and Time
@@ -78,20 +107,56 @@ struct NumericType : AbstractType<S, T> {
 
     /**
      * @brief Serialize numeric content into given buffer
-     * Conditional conversion of endianness
-     * Thanks to oHo at https://stackoverflow.com/questions/809902/64-bit-ntohl-in-c
      * @param buffer
      */
     void serialize(char* buffer) {
         Q value = n_;
         if constexpr (std::endian::native == std::endian::little) {
-            char* ptr = reinterpret_cast<char*>(&value);
-            std::reverse(ptr, ptr + S);
+            if (S == 4) value = bswap_32(value);
+            if (S == 8) value = bswap_64(value);
         }
         memcpy(buffer, &value, S);
     }
 };
 
+struct Int : NumericType<int32_t, 4, 'i'> {
+    using NumericType::NumericType;  // inherit constructor
+};
+
+struct Float : NumericType<float, 4, 'f'> {
+    using NumericType::NumericType;  // inherit constructor
+
+    void serialize(char* buffer) {
+        float value = n_;
+        uint32_t temp;
+        std::memcpy(&temp, &value, sizeof(float));
+
+        temp = ((temp & 0x000000FF) << 24) |
+            ((temp & 0x0000FF00) << 8)  |
+            ((temp & 0x00FF0000) >> 8)  |
+            ((temp & 0xFF000000) >> 24);
+
+        memcpy(buffer, &temp, 4);
+    }
+
+};
+
+struct Time : NumericType<uint64_t, 8, 't'> {
+    Time() : NumericType(0) {
+        const uint64_t NTP_EPOCH = 2208988800ULL;  // Seconds between 1900 and 1970 (Unix epoch)
+        auto now = std::chrono::system_clock::now().time_since_epoch();
+        uint64_t secondsSinceEpoch = std::chrono::duration_cast<std::chrono::seconds>(now).count();
+        uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count() % 1000000000;
+        uint32_t ntp_seconds = static_cast<uint32_t>(secondsSinceEpoch + NTP_EPOCH);
+        uint32_t ntp_fraction = static_cast<uint32_t>((nanoseconds * (1LL << 32)) / 1000000000);
+        n_ = ((uint64_t)ntp_seconds << 32) | ntp_fraction;
+    }
+
+    explicit Time(uint64_t n) : NumericType(n) {}
+};
+
+/////////////////
+// Array Types
 
 /**
  * @brief Base class for String and Blob
@@ -117,67 +182,15 @@ struct ArrayType : AbstractType<S, T> {
     }
 };
 
-
-/**
- * @brief Start a new message
- * Finalize previous message
- */
-struct Message : AbstractType<> {
-    const char* uri_;
-    explicit Message(const char* uri) : uri_(uri) {}
-};
-
-/**
- * @brief Send all messages in current bundle and start a new bundle
- * Also finalizes current message
- */
-struct Flush : AbstractType<> {};
-
-
-// Concrete Impulse Types:
-
-struct True : AbstractType<0, 'T'> { };
-
-struct False : AbstractType<0, 'F'> { };
-
-struct Null : AbstractType<0, 'N'> { };
-
-struct Impulse : AbstractType<0, 'I'> { };
-
-
-// Concrete Numeric Types:
-
-struct Int : NumericType<int32_t, 4, 'i'> {
-    using NumericType::NumericType;  // inherit constructor
-};
-
-struct Float : NumericType<float, 4, 'f'> {
-    using NumericType::NumericType;  // inherit constructor
-};
-
-struct Time : NumericType<uint64_t, 8, 't'> {
-    Time() : NumericType(0) {  // time since first use of Time()
-        using std::chrono::system_clock, std::chrono::nanoseconds, std::chrono::duration_cast;
-        static system_clock::time_point start {
-            system_clock::now()
-        };
-        int64_t nano = duration_cast<nanoseconds>(system_clock::now() - start).count();
-        int64_t sec = nano / 1e+9;
-        n_ = (sec << 32) + (nano - (sec * 1e+9));
-    }
-
-    explicit Time(uint64_t n) : NumericType(n) {}
-};
-
-
-// Concrete Array Types:
-
 struct String : ArrayType<char, 0, 's'> {
     String(const char* a, int32_t size) : ArrayType(a, size) {}
-    explicit String(const char* a) : String(a, std::strlen(a) + 1) {}
+    explicit String(const char* a) : String(a, std::strlen(a)) {}
 
     void serialize(char* buffer) {
         strncpy(buffer, a_, size_);
+        for (int i = size_; i < size(); i++) {
+            buffer[i] = '\0';
+        }
     }
 };
 

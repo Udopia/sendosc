@@ -29,86 +29,56 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <chrono>
 #include <byteswap.h>
 
-/**
- * @brief Namespace of OSC Data Stream and Structs
- */
+
 namespace OSC {
 
 /**
- * @brief Default Implementations for OSC Type Methods
- * Default implementations for inheritance by OSC Types
- * 
+ * @brief Generic OSC data type with default implementations for inheritance by concrete types
+ * @tparam Q internal type
  * @tparam S type size
  * @tparam T type char
  */
-template<unsigned S = 0, char T = '\0'>
+template<typename Q = void, unsigned S = 0, char T = '\0'>
 struct AbstractType {
-    /**
-     * @brief Type indicator character
-     * Used in message serialization
-     * @return char Type indicator (default: '\0')
-     */
+    // @brief Type indicator character used in message serialization
     char type() { return T; }
 
-    /**
-     * @brief Size of serialized content
-     * @return unsigned Number of bytes occupied by serialized content (default: 0)
-     */
+    // @brief Size of serialized object
     unsigned size() { return S; }
 
-    /**
-     * @brief Serialize content into given buffer
-     * @param buffer
-     */
+    // @brief Serializes object into given buffer
     void serialize(char*) { }
 };
 
-/**
- * @brief Start a new message
- * Finalize previous message
- */
+/////////////////
+// Control Types
+
+// @brief Start a new message, finalize previous message
 struct Message : AbstractType<> {
     const char* uri_;
     explicit Message(const char* uri) : uri_(uri) {}
 };
 
-/**
- * @brief Send all messages in current bundle and start a new bundle
- * Also finalizes current message
- */
+// @brief Send all messages in current bundle and start a new bundle
 struct Flush : AbstractType<> {};
 
 /////////////////
 // Impulse Types
-
-struct True : AbstractType<0, 'T'> { };
-
-struct False : AbstractType<0, 'F'> { };
-
-struct Null : AbstractType<0, 'N'> { };
-
-struct Impulse : AbstractType<0, 'I'> { };
+struct True : AbstractType<void, 0, 'T'> { };
+struct False : AbstractType<void, 0, 'F'> { };
+struct Null : AbstractType<void, 0, 'N'> { };
+struct Impulse : AbstractType<void, 0, 'I'> { };
 
 /////////////////
 // Numeric Types
 
-/**
- * @brief Base class for Int, Float and Time
- * 
- * @tparam Q internal type
- * @tparam S type size
- * @tparam T type char
- */
+// @brief Base class for Int, Time, and Float
 template<typename Q, unsigned S = sizeof(Q), char T = '\0'>
-struct NumericType : AbstractType<S, T> {
+struct NumericType : AbstractType<Q, S, T> {
     Q n_;
 
     explicit NumericType(Q n) : n_(n) {}
 
-    /**
-     * @brief Serialize numeric content into given buffer
-     * @param buffer
-     */
     void serialize(char* buffer) {
         Q value = n_;
         if constexpr (std::endian::native == std::endian::little) {
@@ -119,29 +89,17 @@ struct NumericType : AbstractType<S, T> {
     }
 };
 
-struct Int : NumericType<int32_t, 4, 'i'> {
-    using NumericType::NumericType;  // inherit constructor
+struct Int : NumericType<int32_t, sizeof(int32_t), 'i'> {
+    using NumericType::NumericType;
 };
 
-struct Float : NumericType<float, 4, 'f'> {
-    using NumericType::NumericType;  // inherit constructor
-
-    void serialize(char* buffer) {
-        float value = n_;
-        uint32_t temp;
-        std::memcpy(&temp, &value, sizeof(float));
-
-        temp = ((temp & 0x000000FF) << 24) |
-            ((temp & 0x0000FF00) << 8)  |
-            ((temp & 0x00FF0000) >> 8)  |
-            ((temp & 0xFF000000) >> 24);
-
-        memcpy(buffer, &temp, 4);
+struct Float : NumericType<int32_t, sizeof(int32_t), 'f'> {
+    explicit Float(float n) : NumericType(0) {
+        std::memcpy(&n_, &n, sizeof(float));
     }
-
 };
 
-struct Time : NumericType<uint64_t, 8, 't'> {
+struct Time : NumericType<uint64_t, sizeof(uint64_t), 't'> {
     Time() : NumericType(0) {
         const uint64_t NTP_EPOCH = 2208988800ULL;  // Seconds between 1900 and 1970 (Unix epoch)
         auto now = std::chrono::system_clock::now().time_since_epoch();
@@ -151,32 +109,21 @@ struct Time : NumericType<uint64_t, 8, 't'> {
         uint32_t ntp_fraction = static_cast<uint32_t>((nanoseconds * (1LL << 32)) / 1000000000);
         n_ = ((uint64_t)ntp_seconds << 32) | ntp_fraction;
     }
-
-    explicit Time(uint64_t n) : NumericType(n) {}
 };
 
 /////////////////
 // Array Types
 
-/**
- * @brief Base class for String and Blob
- * 
- * @tparam Q internal type
- * @tparam S type size
- * @tparam T type char
- */
+// @brief Base class for String and Blob
 template<typename Q, unsigned S = 0, char T = '\0'>
-struct ArrayType : AbstractType<S, T> {
+struct ArrayType : AbstractType<Q, S, T> {
     const Q* a_;
     int32_t size_;
 
     ArrayType(const Q* a, int32_t size) : a_(a), size_(size) {}
     explicit ArrayType(const Q* a) : ArrayType(a, 0) {}
 
-    /**
-     * @brief Round length to next multiple of four
-     * Thanks to Henry S. Warren Jr. in Hacker's Delight
-     */
+    // @brief Round length to next multiple of four
     unsigned size() {
         return (size_ + 3) & ~0x3;
     }
@@ -184,22 +131,21 @@ struct ArrayType : AbstractType<S, T> {
 
 struct String : ArrayType<char, 0, 's'> {
     String(const char* a, int32_t size) : ArrayType(a, size) {}
-    explicit String(const char* a) : String(a, std::strlen(a)) {}
+    explicit String(const char* a) : String(a, std::strlen(a) + 1) {}
 
     void serialize(char* buffer) {
         strncpy(buffer, a_, size_);
-        for (int i = size_; i < size(); i++) {
-            buffer[i] = '\0';
-        }
+        memset(buffer + size_, '\0', size() - size_);
     }
 };
 
 struct Blob : ArrayType<void, 0, 'b'> {
-    Blob(const void* a, int32_t size) : ArrayType(a, size + Int(size).size()) {}
+    Blob(const void* a, int32_t size) : ArrayType(a, size) {}
 
     void serialize(char* buffer) {
-        Int(size_).serialize(buffer);
-        memcpy(buffer + Int(size_).size(), a_, size_ - Int(size_).size());
+        auto s = Int(size_);
+        s.serialize(buffer);
+        memcpy(buffer + s.size(), a_, size_);
     }
 };
 

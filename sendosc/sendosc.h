@@ -22,8 +22,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <cassert>
 
-#include "UdpSocket.h"
-#include "OscTypes.h"
+#include "udpsocket.h"
+#include "osctypes.h"
 
 /**
  * This implementation of OSC handles one bundle of messages at a time,
@@ -49,7 +49,7 @@ class Stream {
     // pointer to start of current message
     char* mstart_;
 
-    UdpSocket sock_;
+    UDPsock sock_;
 
  public:
     Stream(const char* address, int port, unsigned capacity = 2048) : sock_(address, port) {
@@ -72,7 +72,7 @@ class Stream {
     void init_fresh_bundle() {
         std::fill(data_, dend_, '\0');
         dcursor_ = data_;
-        write(String("#bundle"));
+        write(String("#bundle", 8));
         write(Time());
         mstart_ = dcursor_;
     }

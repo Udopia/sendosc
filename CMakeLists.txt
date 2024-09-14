@@ -3,4 +3,4 @@ project(sendosc VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(sendosc src/Main.cc)
+add_executable(sendosc Main.cc)

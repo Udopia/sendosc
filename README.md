@@ -1,22 +1,14 @@
-# sendosc
-Lightweight Algorithm Sonification with Open Sound Control (OSC)
+# SendOSC
 
-Sendosc is a lighwight implementation of the OSC protocol for data streams that shall be sonified.
+Lightweight Algorithm Sonification with Open Sound Control (OSC):
 
-Sonification denotes the modelling of acoustic representations of data.
-Acoustic data modelling is particularly useful for the portrayal of time series.
-Time series of data map naturally to acoustic time series and human auditory perception has a high temporal resolution, i.e., distinguishable events per second.
+SendOSC is a lightweight implementation of the OSC protocol for sonification data streams. Sonification is the process of creating acoustic representations of data. Acoustic data modeling is particularly useful for portraying time series, as they naturally correspond to acoustic time series. Furthermore, the human auditory system has high temporal resolution, meaning it can distinguish many events per second.
 
-Runs of algorithms can be understood as a time series of internal states and events.
-Algorithm sonification denotes the acoustic modelling of that data.
-That involves two steps:
+Runs of algorithms can be understood as time series of internal states and events. Algorithm sonification involves the acoustic modeling of that data. This process involves two steps:
 
-  * Data selection: Select data points for use in acoustic modelling
-  * Acoustic modelling: Decide how data points shape the sound scape
+1. Data Selection: Select data points to use in acoustic modeling.
+2. Acoustic Modeling: Determine how the data points shape the soundscape.
 
-Open Sound Control (OSC) is a UDP-based network protocol.
-Most digital sound synthesizers implement interfaces to receive and process OSC signals.
+Open Sound Control (OSC) is a User Datagram Protocol (UDP)-based network protocol. Most digital sound synthesizers have interfaces that can receive and process OSC signals.
 
-Sendosc can be used by algorithm designers to analyse runs of their algorithms by means of their auditory perception organs.
-Sendosc can _not_ be used for acoustic modelling, as this is done in digital sound synthesis tools which map the incoming OSC messages to actual sound.
-Sendosc can be easily integrated in algorithms for sending data points in a format that is implemented by most sound synthesis tools.
+SendOSC helps algorithm designers analyze their algorithms' performance using auditory perception. It can be integrated into algorithms to send data points in a format implemented by most sound synthesis tools. However, SendOSC cannot be used for acoustic modeling, which is a task performed by digital sound synthesis tools that map incoming OSC messages to sound.

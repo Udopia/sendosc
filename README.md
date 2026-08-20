@@ -31,8 +31,7 @@ Translating algorithm execution dynamics into meaningful soundscapes requires a 
    * Receive incoming OSC streams.
    * Map incoming execution state messages to acoustic parameters (e.g., frequency, pitch, velocity, timbre, panning) using specialized software (e.g., SuperCollider, Pure Data, Max/MSP).
 
-## 🎯 Scope & Technical Architecture
+## 🎯 Scope & Design
 
-* **Header-Only & Lightweight:** Zero-dependency implementation designed for direct embedding into performance-critical C++ or C codebases with minimal CPU overhead.
-* **Network Transport Layer:** Functions strictly as the **data transmission protocol**.
-* **Separation of Concerns:** `SendOSC` handles telemetry payload packaging and network transfer, delegating acoustic rendering entirely to modern sound synthesis systems.
+* Zero-dependency implementation designed for direct embedding into performance-critical C++ or C codebases with minimal overhead.
+* Handles protocol encoding and network transfer, delegating acoustic rendering entirely to modern sound synthesis systems.

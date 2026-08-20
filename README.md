@@ -23,10 +23,10 @@ Algorithm executions naturally form **time-series data** composed of internal st
 Translating algorithm execution dynamics into meaningful soundscapes requires a two-step separation of concerns:
 
 ```
-+---------------------------------+        OSC Stream        +----------------------------------+
-|      Algorithm + SendOSC        |   ====================>  |     Digital Sound Synthesizer    |
-|       (Data Selection)          |       (UDP Network)      |        (Acoustic Modeling)       |
-+---------------------------------+                          +----------------------------------+
++----------------------------+        OSC Stream        +-------------------------------+
+|    Algorithm + SendOSC     |   ====================>  |   Digital Sound Synthesizer   |
+|     (Data Selection)       |       (UDP Network)      |      (Acoustic Modeling)      |
++----------------------------+                          +-------------------------------+
 ```
 
 1. **Data Selection (`SendOSC`)**

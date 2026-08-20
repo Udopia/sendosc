@@ -1,14 +1,46 @@
-# SendOSC
+# SendOSC: Lightweight Algorithm Sonification with Open Sound Control
 
-Lightweight Algorithm Sonification with Open Sound Control (OSC):
+**SendOSC** is a lightweight, header-only implementation of the Open Sound Control (OSC) protocol designed for real-time sonification of algorithmic data streams over UDP.
 
-SendOSC is a lightweight implementation of the OSC protocol for sonification data streams. Sonification is the process of creating acoustic representations of data. Acoustic data modeling is particularly useful for portraying time series, as they naturally correspond to acoustic time series. Furthermore, the human auditory system has high temporal resolution, meaning it can distinguish many events per second.
+---
 
-Runs of algorithms can be understood as time series of internal states and events. Algorithm sonification involves the acoustic modeling of that data. This process involves two steps:
+## 📌 Overview
 
-1. Data Selection: Select data points to use in acoustic modeling.
-2. Acoustic Modeling: Determine how the data points shape the soundscape.
+Sonification is the process of translating data into auditory representations. SendOSC enables algorithm designers, software engineers, and researchers to analyze, debug, and monitor algorithm performance through continuous real-time auditory feedback.
 
-Open Sound Control (OSC) is a User Datagram Protocol (UDP)-based network protocol. Most digital sound synthesizers have interfaces that can receive and process OSC signals.
+---
 
-SendOSC helps algorithm designers analyze their algorithms' performance using auditory perception. It can be integrated into algorithms to send data points in a format implemented by most sound synthesis tools. However, SendOSC cannot be used for acoustic modeling, which is a task performed by digital sound synthesis tools that map incoming OSC messages to sound.
+## 🎧 Motivation: Why Sonify Algorithms?
+
+Algorithm executions naturally form **time-series data** composed of internal state transitions, loop iterations, memory accesses, and dynamic events. 
+
+* **High Temporal Resolution:** The human auditory system excels at distinguishing high-frequency events and rapid temporal patterns that visual displays often miss.
+* **Pattern & Anomaly Detection:** Real-time sonification makes subtle structural behavior, performance bottlenecks, dynamic phase transitions, and unexpected edge-case loops immediately perceptible.
+
+---
+
+## ⚙️ The Sonification Pipeline
+
+Translating algorithm execution dynamics into meaningful soundscapes requires a two-step separation of concerns:
+
+```
++---------------------------------+        OSC Stream        +----------------------------------+
+|      Algorithm + SendOSC        |   ====================>  |     Digital Sound Synthesizer    |
+|  (Data Selection & Extraction)  |       (UDP Network)      |   (Acoustic Modeling & Render)   |
++---------------------------------+                          +----------------------------------+
+```
+
+1. **Data Selection & Telemetry (`SendOSC`)**
+   * Identify internal data points, metrics, and event triggers during runtime.
+   * Package and broadcast execution state as structured OSC messages over UDP.
+2. **Acoustic Modeling & Synthesis (External Audio Engine)**
+   * Receive incoming OSC streams.
+   * Map incoming execution state messages to acoustic parameters (e.g., frequency, pitch, velocity, timbre, panning) using specialized software (e.g., SuperCollider, Pure Data, Max/MSP).
+
+---
+
+## 🎯 Scope & Technical Architecture
+
+* **Header-Only & Lightweight:** Zero-dependency implementation designed for direct embedding into performance-critical C++ or C codebases with minimal CPU overhead.
+* **Network Transport Layer:** Functions strictly as the **data transmission protocol**.
+* **Separation of Concerns:** `SendOSC` handles telemetry payload packaging and network transfer, delegating acoustic rendering entirely to modern sound synthesis systems.

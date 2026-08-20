@@ -1,4 +1,4 @@
-# Lightweight Algorithm Sonification with Open Sound Control
+# Lightweight Algorithm Sonification
 
 **SendOSC** is a lightweight, header-only implementation of the Open Sound Control (OSC) protocol designed for real-time sonification of algorithmic data streams over UDP.
 

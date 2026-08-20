@@ -13,6 +13,11 @@ Algorithm executions naturally form **time-series data** composed of internal st
 * **High Temporal Resolution:** The human auditory system excels at distinguishing high-frequency events and rapid temporal patterns that visual displays often miss.
 * **Pattern & Anomaly Detection:** Real-time sonification makes subtle structural behavior, performance bottlenecks, dynamic phase transitions, and unexpected edge-case loops immediately perceptible.
 
+## 🎯 Scope & Design
+
+* Zero-dependency implementation designed for direct embedding into performance-critical codebases with minimal overhead.
+* Handles protocol encoding and network transfer, delegating acoustic rendering entirely to modern sound synthesis systems.
+
 ## ⚙️ The Sonification Pipeline
 
 Translating algorithm execution dynamics into meaningful soundscapes requires a two-step separation of concerns:
@@ -20,18 +25,13 @@ Translating algorithm execution dynamics into meaningful soundscapes requires a 
 ```
 +---------------------------------+        OSC Stream        +----------------------------------+
 |      Algorithm + SendOSC        |   ====================>  |     Digital Sound Synthesizer    |
-|  (Data Selection & Extraction)  |       (UDP Network)      |   (Acoustic Modeling & Render)   |
+|       (Data Selection)          |       (UDP Network)      |        (Acoustic Modeling)       |
 +---------------------------------+                          +----------------------------------+
 ```
 
-1. **Data Selection & Telemetry (`SendOSC`)**
+1. **Data Selection (`SendOSC`)**
    * Identify internal data points, metrics, and event triggers during runtime.
    * Package and broadcast execution state as structured OSC messages over UDP.
-2. **Acoustic Modeling & Synthesis (External Audio Engine)**
+2. **Acoustic Modeling (External Audio Engine)**
    * Receive incoming OSC streams.
    * Map incoming execution state messages to acoustic parameters (e.g., frequency, pitch, velocity, timbre, panning) using specialized software (e.g., SuperCollider, Pure Data, Max/MSP).
-
-## 🎯 Scope & Design
-
-* Zero-dependency implementation designed for direct embedding into performance-critical C++ or C codebases with minimal overhead.
-* Handles protocol encoding and network transfer, delegating acoustic rendering entirely to modern sound synthesis systems.

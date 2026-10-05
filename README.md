@@ -25,10 +25,21 @@ Through its high temporal resolution, the human auditory system excels at distin
 * Encodes OSC bundles and sends them over UDP in a lightweight, header-only, zero-dependency implementation.
 * Leaves sound synthesis to external audio systems, such as SuperCollider, Pure Data, and Max/MSP.
 
+## Build and test
+
+Requires Linux, a C++20 compiler, and CMake. Run from the repository root:
+
+```sh
+cmake -S . -B build
+cmake --build build
+cmake --build build --target test
+```
+
 ## Command-line interface (mostly here for testing it)
 
 The `sendosc` executable accepts a destination IPv4 address and UDP port followed
-by one or more `ADDRESS TYPE VALUE` triples:
+by one or more `ADDRESS TYPE VALUE` triples. These examples assume your working
+directory is `build`:
 
 ```sh
 ./sendosc 127.0.0.1 57120 /program/state i 1
@@ -48,6 +59,18 @@ Use `./sendosc --help` to display usage. Invalid arguments or a bundle exceeding
 the stream's 2048-byte buffer produce an error on standard error and a nonzero
 exit status, without sending a partial bundle. UDP transmission does not
 guarantee delivery to a listening receiver.
+
+### SuperCollider sound test
+
+After building, run from the repository root (Debian/Ubuntu):
+
+```sh
+sudo apt install supercollider
+bash tests/sctest.sh
+```
+
+Loads `tests/sctest.scd` headlessly and plays the Fibonacci state loop.
+Requires working audio/JACK and a free port 57120; shuts down automatically.
 
 ## ⚙️ The Sonification Pipeline
 

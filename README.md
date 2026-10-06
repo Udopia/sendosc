@@ -35,41 +35,16 @@ cmake --build build
 cmake --build build --target test
 ```
 
-## Command-line interface (mostly here for testing it)
-
-The `sendosc` executable accepts a destination IPv4 address and UDP port followed
-by one or more `ADDRESS TYPE VALUE` triples. These examples assume your working
-directory is `build`:
-
-```sh
-./sendosc 127.0.0.1 57120 /program/state i 1
-./sendosc 127.0.0.1 57120 /program/state i 1 /program/progress f 0.5 /program/name s "hello world"
-```
-
-With no arguments, `./sendosc` retains the defaults: it sends `/test` with the
-string `"abrakadabra"` and integer `42` to `127.0.0.1:5000`.
-
-Each triple creates a separate OSC message with one argument. All messages are
-sent together in a single OSC bundle. Supported types are `i` (signed 32-bit
-decimal integer), `f` (finite 32-bit float, including scientific notation), and
-`s` (string). Quote strings containing spaces; `""` sends an empty string.
-Ports must be between 1 and 65535.
-
-Use `./sendosc --help` to display usage. Invalid arguments or a bundle exceeding
-the stream's 2048-byte buffer produce an error on standard error and a nonzero
-exit status, without sending a partial bundle. UDP transmission does not
-guarantee delivery to a listening receiver.
-
 ### SuperCollider sound test
 
 After building, run from the repository root (Debian/Ubuntu):
 
 ```sh
 sudo apt install supercollider
-bash tests/sctest.sh
+./tests/sctest.sh
 ```
 
-Loads `tests/sctest.scd` headlessly and plays the Fibonacci state loop.
+Loads `tests/sctest.scd` headlessly and plays a Fibonacci state loop.
 Requires working audio/JACK and a free port 57120; shuts down automatically.
 
 ## ⚙️ The Sonification Pipeline
